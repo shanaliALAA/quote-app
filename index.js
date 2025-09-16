@@ -4,13 +4,14 @@ const path = require("path");
 const fs = require("fs");
 
 const app = express();
+const PORT = 3000;
 const DATA_FILE = path.join(__dirname, "quotes.json");
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Helper functions
+// --- Helper functions ---
 const loadQuotes = () => {
   try {
     const data = fs.readFileSync(DATA_FILE, "utf-8");
@@ -24,19 +25,24 @@ const saveQuotes = (quotes) => {
   fs.writeFileSync(DATA_FILE, JSON.stringify(quotes, null, 2));
 };
 
-// Routes
+// --- API routes ---
+
+// Get all quotes
 app.get("/api/quotes", (req, res) => {
   const quotes = loadQuotes();
   res.json(quotes);
 });
 
+// Get random quote
 app.get("/api/quotes/random", (req, res) => {
   const quotes = loadQuotes();
   if (quotes.length === 0) return res.status(204).send();
+
   const rand = quotes[Math.floor(Math.random() * quotes.length)];
   res.json(rand);
 });
 
+// Add new quote
 app.post("/api/quotes", (req, res) => {
   const { text, author } = req.body;
   if (!text || text.trim() === "")
@@ -44,12 +50,13 @@ app.post("/api/quotes", (req, res) => {
 
   let quotes = loadQuotes();
 
+  // Prevent duplicate quotes
   if (quotes.some((q) => q.text.toLowerCase() === text.trim().toLowerCase())) {
     return res.status(400).json({ error: "This quote already exists" });
   }
 
   const newQuote = {
-    id: Date.now(),
+    id: Date.now(), // unique ID
     text: text.trim(),
     author: author ? author.trim() : "Unknown",
   };
@@ -59,6 +66,7 @@ app.post("/api/quotes", (req, res) => {
   res.status(201).json(newQuote);
 });
 
+// Delete a quote
 app.delete("/api/quotes/:id", (req, res) => {
   let quotes = loadQuotes();
   const id = Number(req.params.id);
@@ -71,5 +79,12 @@ app.delete("/api/quotes/:id", (req, res) => {
   res.json({ removed });
 });
 
-// Export for Vercel
-module.exports = app;
+// --- Serve frontend HTML ---
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`✅ Server running at http://localhost:${PORT}`);
+});
