@@ -19,13 +19,11 @@ const saveQuotes = (quotes) => {
 
 export default function handler(req, res) {
   if (req.method === "GET") {
-    // Get all quotes
     const quotes = loadQuotes();
     return res.status(200).json(quotes);
   }
 
   if (req.method === "POST") {
-    // Add new quote
     const { text, author } = req.body;
     if (!text || text.trim() === "") {
       return res.status(400).json({ error: "Quote text is required" });
@@ -50,7 +48,7 @@ export default function handler(req, res) {
   }
 
   if (req.method === "DELETE") {
-    const id = Number(req.query.id);
+    const id = Number(req.query.id); // works only if file = pages/api/quotes/[id].js
     let quotes = loadQuotes();
     const index = quotes.findIndex((q) => q.id === id);
 
@@ -62,5 +60,5 @@ export default function handler(req, res) {
   }
 
   res.setHeader("Allow", ["GET", "POST", "DELETE"]);
-  res.status(405).end(Method ${req.method} Not Allowed);
+  res.status(405).end(`Method ${req.method} Not Allowed`);
 }
