@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, "quotes.json");
 
 // Middleware
@@ -85,6 +85,7 @@ app.get("/", (req, res) => {
 });
 
 // Start server
+
 app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+   console.log(`✅ Server running at port ${PORT}`);
 });
