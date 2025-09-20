@@ -1,62 +1,35 @@
-import fs from "fs";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
 
-const DATA_FILE = path.join(process.cwd(), "quotes.json");
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Helper functions
-const loadQuotes = () => {
-  try {
-    const data = fs.readFileSync(DATA_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-};
-
-const saveQuotes = (quotes) => {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(quotes, null, 2));
-};
-
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method === "GET") {
-    const quotes = loadQuotes();
-    return res.status(200).json(quotes);
+    const { data, error } = await supabase.from("quotes").select("*");
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json(data);
   }
 
   if (req.method === "POST") {
     const { text, author } = req.body;
-    if (!text || text.trim() === "") {
+    if (!text || text.trim() === "")
       return res.status(400).json({ error: "Quote text is required" });
-    }
 
-    let quotes = loadQuotes();
-
-    if (quotes.some((q) => q.text.toLowerCase() === text.trim().toLowerCase())) {
-      return res.status(400).json({ error: "This quote already exists" });
-    }
-
-    const newQuote = {
-      id: Date.now(),
-      text: text.trim(),
-      author: author ? author.trim() : "Unknown",
-    };
-
-    quotes.push(newQuote);
-    saveQuotes(quotes);
-
-    return res.status(201).json(newQuote);
+    const { data, error } = await supabase
+      .from("quotes")
+      .insert([{ text: text.trim(), author: author?.trim() || "Unknown" }])
+      .select();
+    
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(201).json(data[0]);
   }
 
   if (req.method === "DELETE") {
-    const id = Number(req.query.id); // works only if file = pages/api/quotes/[id].js
-    let quotes = loadQuotes();
-    const index = quotes.findIndex((q) => q.id === id);
-
-    if (index === -1) return res.status(404).json({ error: "Quote not found" });
-
-    const removed = quotes.splice(index, 1)[0];
-    saveQuotes(quotes);
-    return res.status(200).json({ removed });
+    const id = Number(req.query.id);
+    const { data, error } = await supabase.from("quotes").delete().eq("id", id);
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ removed: data[0] });
   }
 
   res.setHeader("Allow", ["GET", "POST", "DELETE"]);
