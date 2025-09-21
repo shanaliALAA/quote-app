@@ -1,21 +1,18 @@
-import fs from "fs";
-import path from "path";
+import { kv } from "@vercel/kv";
 
-const DATA_FILE = path.join(process.cwd(), "quotes.json");
-
-const loadQuotes = () => {
+export default async function handler(req, res) {
   try {
-    const data = fs.readFileSync(DATA_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
+    const keys = await kv.keys("quote:*");
+    if (keys.length === 0) {
+      return res.status(200).json({ text: "No quotes yet", author: "System" });
+    }
+
+    const randomKey = keys[Math.floor(Math.random() * keys.length)];
+    const quote = await kv.get(randomKey);
+
+    return res.status(200).json(quote);
+  } catch (e) {
+    console.error("Error fetching random quote:", e);
+    return res.status(500).json({ message: "Error fetching random quote" });
   }
-};
-
-export default function handler(req, res) {
-  const quotes = loadQuotes();
-  if (quotes.length === 0) return res.status(204).end();
-
-  const rand = quotes[Math.floor(Math.random() * quotes.length)];
-  res.status(200).json(rand);
 }
